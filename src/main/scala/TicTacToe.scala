@@ -1,4 +1,5 @@
-import scala.io
+import scala.annotation.tailrec
+import scala.io.StdIn.readInt
 
 object TicTacToe {
   val lines = List(
@@ -15,6 +16,7 @@ object TicTacToe {
   )
 
   def play {
+    @tailrec
     def loop(board: List[Int], player: Int): Int = {
       def draw() = {
         for (row <- 0 to 2) {
@@ -31,53 +33,44 @@ object TicTacToe {
         }
       }
 
-      def isFree(pos: Int): Boolean = {
-        if (pos < 1 || pos > 9) false
-        else board(pos - 1) == 0
+      def isFree(pos: Int) = if (pos < 1 || pos > 9) false else board(pos - 1) == 0
+
+      def otherPlayer = if (player == 1) 2 else 1
+
+      def addPlay(pos: Int) = 
+        if (isFree(pos)) Some((board.updated(pos - 1, player), otherPlayer))
+        else None
+
+      def lineWinner(line: List[Int]) = {
+          val linePlayers = line.map(c => board(c - 1)).distinct
+
+          if (linePlayers.size == 1) linePlayers.head
+          else 0
       }
 
-      def otherPlayer() = {
-        if (player == 1) 2 else 1
-      }
+      def winner = lines.foldLeft(0)(
+        (winner, line) =>
+          if (winner != 0) winner
+          else lineWinner(line)
+      )
 
-      def addPlay(pos: Int): (List[Int], Int) = {
-        if (isFree(pos)) (board.updated(pos - 1, player), otherPlayer())
-        else {
-          println("Invalid move, try again")
-          (board, player)
-        }
-      }
-
-      def winner(): Int = {
-        def loop(lines: List[List[Int]]): Int = {
-          if (lines.isEmpty) 0
-          else {
-            val linePlayers = lines.head.map(c => board(c -1)).distinct
-
-            if (linePlayers.size == 1 && linePlayers.head != 0) linePlayers.head
-            else loop(lines.tail)
-          }
-        }
-
-        loop(lines)
-      }
-
-      def gameOver(): Boolean = {
-        winner() > 0 || !board.distinct.contains(0)
-      }
+      def gameOver() = winner > 0 || !board.distinct.contains(0)
 
       draw()
 
-      if (gameOver()) {
-        winner()
-      }
+      if (gameOver()) winner
       else {
         println("Player " + player + ", choose your next move")
 
         val move = readInt
-        val (newBoard, newPlayer) = addPlay(move)
 
-        loop(newBoard, newPlayer)
+        addPlay(move) match {
+          case Some((newBoard, newPlayer)) => loop(newBoard, newPlayer)
+          case None => {
+            println("Invalid move, try again")
+            loop(board, player)
+          }
+        }
       }
     }
 
